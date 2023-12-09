@@ -9,6 +9,10 @@
 #include<map>
 #include<ctime>
 #include<random>
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
+#include <iostream>
 
 GLuint texture;
 
@@ -83,76 +87,71 @@ void indexVBO(std::vector<glm::vec3>& in_vertices, std::vector<glm::vec2>& in_uv
 		}
 	}
 }
-
-void readObj(const std::string& path, std::vector<glm::vec3>& out_vertices, std::vector<glm::vec2>& out_uvs, std::vector<glm::vec3>& out_normals)
+void processMesh(aiMesh* mesh, const aiScene* scene, std::vector<glm::vec3>& out_vertices, std::vector<glm::vec2>& out_uvs, std::vector<glm::vec3>& out_normals)
 {
-	std::vector<unsigned int> vertex_indices, uv_indices, normal_indices;
-	std::vector<glm::vec3> temp_vertices;
-	std::vector<glm::vec2> temp_uvs;
-	std::vector<glm::vec3> temp_normals;
-
-	std::ifstream infile(path);
-	std::string line;
-	while (getline(infile, line))
+	for (unsigned int i = 0; i < mesh->mNumVertices; ++i)
 	{
-		std::stringstream ss(line);
-		std::string lineHeader;
-		getline(ss, lineHeader, ' ');
-		if (lineHeader == "v")
-		{
-			glm::vec3 vertex;
-			ss >> vertex.x >> vertex.y >> vertex.z;
-			vertex.x *= 8;
-			vertex.y *= 8;
-			vertex.z *= 8;
-			temp_vertices.push_back(vertex);
-		}
-		else if (lineHeader == "vt")
-		{
-			glm::vec2 uv;
-			ss >> uv.x >> uv.y;
-			temp_uvs.push_back(uv);
-		}
-		else if (lineHeader == "vn")
-		{
-			glm::vec3 normal;
-			ss >> normal.x >> normal.y >> normal.z;
-			temp_normals.push_back(normal);
-		}
-		else if (lineHeader == "f")
-		{
-			unsigned int vertex_index[3], uv_index[3], normal_index[3];
-			char slash;
-			ss >> vertex_index[0] >> slash >> uv_index[0] >> slash >> normal_index[0] >> vertex_index[1] >> slash >> uv_index[1] >> slash >> normal_index[1] >> vertex_index[2] >> slash >> uv_index[2] >> slash >> normal_index[2];
-
-			vertex_indices.push_back(vertex_index[0]);
-			vertex_indices.push_back(vertex_index[1]);
-			vertex_indices.push_back(vertex_index[2]);
-			uv_indices.push_back(uv_index[0]);
-			uv_indices.push_back(uv_index[1]);
-			uv_indices.push_back(uv_index[2]);
-			normal_indices.push_back(normal_index[0]);
-			normal_indices.push_back(normal_index[1]);
-			normal_indices.push_back(normal_index[2]);
-		}
-	}
-
-	// For each vertex of each triangle
-	for (unsigned int i = 0; i < vertex_indices.size(); ++i)
-	{
-		unsigned int vertexIndex = vertex_indices[i];
-		glm::vec3 vertex = temp_vertices[vertexIndex - 1];
+		glm::vec3 vertex;
+		vertex.x = mesh->mVertices[i].x;
+		vertex.y = mesh->mVertices[i].y;
+		vertex.z = mesh->mVertices[i].z;
 		out_vertices.push_back(vertex);
 
-		unsigned int uvIndex = uv_indices[i];
-		glm::vec2 uv = temp_uvs[uvIndex - 1];
+		glm::vec2 uv;
+		if (mesh->mTextureCoords[0])
+		{
+			uv.x = mesh->mTextureCoords[0][i].x;
+			uv.y = mesh->mTextureCoords[0][i].y;
+		}
+		else
+		{
+			uv.x = 0.0f;
+			uv.y = 0.0f;
+		}
 		out_uvs.push_back(uv);
 
-		unsigned int normalIndex = normal_indices[i];
-		glm::vec3 normal = temp_normals[normalIndex - 1];
+		glm::vec3 normal;
+		normal.x = mesh->mNormals[i].x;
+		normal.y = mesh->mNormals[i].y;
+		normal.z = mesh->mNormals[i].z;
 		out_normals.push_back(normal);
 	}
+	for (unsigned int i = 0; i < mesh->mNumFaces; ++i)
+	{
+		aiFace face = mesh->mFaces[i];
+		for (unsigned int j = 0; j < face.mNumIndices; ++j)
+		{
+			indices.push_back(face.mIndices[j]);
+		}
+	}
 }
+void processNode(aiNode* node, const aiScene* scene, std::vector<glm::vec3>& out_vertices, std::vector<glm::vec2>& out_uvs, std::vector<glm::vec3>& out_normals)
+{
+	for (unsigned int i = 0; i < node->mNumMeshes; ++i)
+	{
+		aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
+		processMesh(mesh, scene, out_vertices, out_uvs, out_normals);
+	}
+
+	for (unsigned int i = 0; i < node->mNumChildren; ++i)
+	{
+		processNode(node->mChildren[i], scene, out_vertices, out_uvs, out_normals);
+	}
+}
+void readObj(const std::string& path, std::vector<glm::vec3>& out_vertices, std::vector<glm::vec2>& out_uvs, std::vector<glm::vec3>& out_normals)
+{
+	Assimp::Importer importer;
+	const aiScene* scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_GenNormals);
+
+	if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
+	{
+		std::cout << "Assimp error: " << importer.GetErrorString() << std::endl;
+		return;
+	}
+
+	processNode(scene->mRootNode, scene, out_vertices, out_uvs, out_normals);
+}
+
 
 void init(void)
 {
@@ -193,7 +192,7 @@ void init(void)
 	std::vector<glm::vec3> vertices;
 	std::vector<glm::vec2> uvs;
 	std::vector<glm::vec3> normals;
-	readObj("statue.obj", vertices, uvs, normals);
+	readObj("tt.obj", vertices, uvs, normals);
 	indexVBO(vertices, uvs, normals, indices, indexed_vertices, indexed_uvs, indexed_normals);
 }
 
@@ -517,7 +516,8 @@ int main(int argc, char** argv)
 	glutReshapeFunc(reshape);
 	glutSpecialFunc(specialKeys);
 	glutKeyboardFunc(keyboard);
-	scale_model(0.0125/4);
+	//scale_model(0.0125 * 10);
+	scale_model(10);
 	glutMainLoop();
 
 	//disable_all();
