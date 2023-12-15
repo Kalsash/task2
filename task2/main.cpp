@@ -155,7 +155,7 @@ void readObj(const std::string& path, std::vector<glm::vec3>& out_vertices, std:
 
 void init(void)
 {
-	glClearColor(0.0, 0.0, 0.0, 1.0);
+	glClearColor(0.529, 0.808, 0.922, 1.0);  // Устанавливаем цвет фона главного окна в голубой
 	glEnable(GL_NORMALIZE);
 	glEnable(GL_COLOR_MATERIAL);
 	glEnable(GL_CULL_FACE);
@@ -176,10 +176,10 @@ void init(void)
 	glLightfv(GL_LIGHT3, GL_SPECULAR, light_specular);
 
 	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_LIGHTING);
-	glEnable(GL_LIGHT1);
-	glEnable(GL_LIGHT2);
-	glEnable(GL_LIGHT3);
+	//glEnable(GL_LIGHTING);
+	//glEnable(GL_LIGHT1);
+	//glEnable(GL_LIGHT2);
+	//glEnable(GL_LIGHT3);
 
 	texture = SOIL_load_OGL_texture
 	(
@@ -396,28 +396,28 @@ void display(void)
 	glutSwapBuffers();
 }
 
-void specialKeys(int key, int x, int y)
-{
-	switch (key)
-	{
-	case GLUT_KEY_UP: light_pos[light_num] += 0.5; break;
-	case GLUT_KEY_DOWN: light_pos[light_num] -= 0.5; break;
-	case GLUT_KEY_RIGHT: light_angle[light_num] -= 3; break;
-	case GLUT_KEY_LEFT: light_angle[light_num] += 3; break;
-	case GLUT_KEY_PAGE_UP: light_rad[light_num] -= 0.5; break;
-	case GLUT_KEY_PAGE_DOWN: light_rad[light_num] += 0.5; break;
-	case GLUT_KEY_F1:
-		light_num = 0;
-		break;
-	case GLUT_KEY_F2:
-		light_num = 1;
-		break;
-	case GLUT_KEY_F3:
-		light_num = 2;
-		break;
-	}
-	glutPostRedisplay();
-}
+//void specialKeys(int key, int x, int y)
+//{
+//	switch (key)
+//	{
+//	case GLUT_KEY_UP: light_pos[light_num] += 0.5; break;
+//	case GLUT_KEY_DOWN: light_pos[light_num] -= 0.5; break;
+//	case GLUT_KEY_RIGHT: light_angle[light_num] -= 3; break;
+//	case GLUT_KEY_LEFT: light_angle[light_num] += 3; break;
+//	case GLUT_KEY_PAGE_UP: light_rad[light_num] -= 0.5; break;
+//	case GLUT_KEY_PAGE_DOWN: light_rad[light_num] += 0.5; break;
+//	case GLUT_KEY_F1:
+//		light_num = 0;
+//		break;
+//	case GLUT_KEY_F2:
+//		light_num = 1;
+//		break;
+//	case GLUT_KEY_F3:
+//		light_num = 2;
+//		break;
+//	}
+//	glutPostRedisplay();
+//}
 
 void keyboard(unsigned char key, int x, int y)
 {
@@ -465,7 +465,7 @@ void keyboard(unsigned char key, int x, int y)
 	case 'a':
 	case 'A':
 		is_left = 1;
-		//cameraX -= SPEED/8; // Движение влево
+		cameraX -= SPEED/8; // Движение влево
 		break;
 	case 'd':
 	case 'D':
@@ -514,7 +514,7 @@ int main(int argc, char** argv)
 	init();
 	glutDisplayFunc(display);
 	glutReshapeFunc(reshape);
-	glutSpecialFunc(specialKeys);
+	//glutSpecialFunc(specialKeys);
 	glutKeyboardFunc(keyboard);
 	//scale_model(0.0125 * 10);
 	scale_model(10);
