@@ -15,6 +15,7 @@
 #include <iostream>
 
 GLuint texture;
+GLuint texture2;
 
 //вершины объекта
 std::vector<glm::vec3> indexed_vertices;
@@ -188,12 +189,25 @@ void init(void)
 		SOIL_CREATE_NEW_ID,
 		SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y | SOIL_FLAG_NTSC_SAFE_RGB | SOIL_FLAG_COMPRESS_TO_DXT
 	);
+	texture2 = SOIL_load_OGL_texture(
+		"Penguin Diffuse Color.png",
+		SOIL_LOAD_AUTO,
+		SOIL_CREATE_NEW_ID,
+		SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y | SOIL_FLAG_NTSC_SAFE_RGB | SOIL_FLAG_COMPRESS_TO_DXT
+	);
 	// Read our .obj file
 	std::vector<glm::vec3> vertices;
 	std::vector<glm::vec2> uvs;
 	std::vector<glm::vec3> normals;
 	readObj("tt.obj", vertices, uvs, normals);
 	indexVBO(vertices, uvs, normals, indices, indexed_vertices, indexed_uvs, indexed_normals);
+
+	// Read the second .obj file
+	std::vector<glm::vec3> vertices2;
+	std::vector<glm::vec2> uvs2;
+	std::vector<glm::vec3> normals2;
+	readObj("PenguinBaseMesh.obj", vertices2, uvs2, normals2);
+	indexVBO(vertices2, uvs2, normals2, indices, indexed_vertices, indexed_uvs, indexed_normals);
 }
 
 double gr_cos(float angle) noexcept
@@ -204,51 +218,6 @@ double gr_cos(float angle) noexcept
 double gr_sin(float angle) noexcept
 {
 	return sin(angle / 180 * pi);
-}
-
-void set_lights()
-{
-	double x = light_rad[0] * gr_cos(light_angle[0]);
-	double z = light_rad[0] * gr_sin(light_angle[0]);
-	GLfloat position[] = { 0, 0, 0, 1 };
-	GLfloat light[] = { 1, 1, 1, 1 };
-	GLfloat no_light[] = { 0, 0, 0, 1 };
-	if (glIsEnabled(GL_LIGHT1))
-	{
-		glPushMatrix();
-		glTranslatef(x, light_pos[0], z);
-		glLightfv(GL_LIGHT1, GL_POSITION, position);
-		glMaterialfv(GL_FRONT, GL_EMISSION, light);
-		glutSolidSphere(0.5, 10, 10);
-		glMaterialfv(GL_FRONT, GL_EMISSION, no_light);
-		glPopMatrix();
-	}
-
-	if (glIsEnabled(GL_LIGHT2))
-	{
-		glPushMatrix();
-		x = light_rad[1] * gr_cos(light_angle[1]);
-		z = light_rad[1] * gr_sin(light_angle[1]);
-		glTranslatef(x, light_pos[1], z);
-		glLightfv(GL_LIGHT2, GL_POSITION, position);
-		glMaterialfv(GL_FRONT, GL_EMISSION, light);
-		glutSolidSphere(0.5, 10, 10);
-		glMaterialfv(GL_FRONT, GL_EMISSION, no_light);
-		glPopMatrix();
-	}
-
-	if (glIsEnabled(GL_LIGHT3))
-	{
-		glPushMatrix();
-		x = light_rad[2] * gr_cos(light_angle[2]);
-		z = light_rad[2] * gr_sin(light_angle[2]);
-		glTranslatef(x, light_pos[2], z);
-		glLightfv(GL_LIGHT3, GL_POSITION, position);
-		glMaterialfv(GL_FRONT, GL_EMISSION, light);
-		glutSolidSphere(0.5, 10, 10);
-		glMaterialfv(GL_FRONT, GL_EMISSION, no_light);
-		glPopMatrix();
-	}
 }
 
 void reshape(int w, int h)
@@ -336,12 +305,11 @@ void draw_head()
 	cleanup_buffers();
 }
 
-void draw_model()
+void draw_model(float angle, float distance)
 {
 	glPushMatrix();
-	glTranslatef(x, y, z);
-	glRotatef(model_angle, 0, 1, 0);
-	//glColor3f(0.8, 0.8, 0.8);
+	glRotatef(angle, 0, 1, 0);
+	glTranslatef(distance, 0.0f, 0.0f);
 	draw_head();
 	glPopMatrix();
 }
@@ -349,75 +317,23 @@ void draw_model()
 void display(void)
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glMatrixMode(GL_MODELVIEW); // Выбор матрицы моделирования-вида
-	glLoadIdentity(); // Сброс матрицы
-	kk += SPEED;
-	//gluLookAt(0+kk, 10, 30,  // Положение камеры
-	//	0.0f+kk, 0.0f, 0.0f,          // Координаты цели, куда смотрит камера (в данном случае в начало координат)
-	//	0.0f, 1.0f, 0.0f);         // Направление вертикальной оси камеры
-	if (is_ahead)
-	{
-		x += SPEED * gr_sin(model_angle);
-		z += SPEED * gr_cos(model_angle);
-		is_ahead = 0;
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	gluLookAt(0 + kk, 10, 30, 0.0f + kk, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f);
+
+	float circle_radius = 8.0f;
+	float distance_between_models = 5.0f;
+
+	for (int i = 0; i < 5; i++) {
+		float angle = i * 360.0f / 5.0f;
+		float x = circle_radius * cos(glm::radians(angle));
+		float z = circle_radius * sin(glm::radians(angle));
+		draw_model(angle, distance_between_models * i);
 	}
-	if (is_up)
-	{
-		x += SPEED * gr_sin(model_angle);
-		y += SPEED * gr_cos(model_angle);
-		is_up = 0;
-	}
-	if (is_down)
-	{
-		x -= SPEED * gr_sin(model_angle);
-		y -= SPEED * gr_cos(model_angle);
-		is_down = 0;
-	}
-	if (is_right)
-	{
-		//x += SPEED * gr_sin(model_angle);
-		x += SPEED * gr_cos(model_angle);
-		is_right = 0;
-	}
-	if (is_left)
-	{
-		//y += SPEED * gr_sin(model_angle);
-		x -= SPEED * gr_cos(model_angle);
-		is_left = 0;
-	}
-	if (is_back)
-	{
-		x -= SPEED * gr_sin(model_angle);
-		z -= SPEED * gr_cos(model_angle);
-		is_back = 0;
-	}
-	set_lights();
-	draw_model();
+
+
 	glutSwapBuffers();
 }
-
-//void specialKeys(int key, int x, int y)
-//{
-//	switch (key)
-//	{
-//	case GLUT_KEY_UP: light_pos[light_num] += 0.5; break;
-//	case GLUT_KEY_DOWN: light_pos[light_num] -= 0.5; break;
-//	case GLUT_KEY_RIGHT: light_angle[light_num] -= 3; break;
-//	case GLUT_KEY_LEFT: light_angle[light_num] += 3; break;
-//	case GLUT_KEY_PAGE_UP: light_rad[light_num] -= 0.5; break;
-//	case GLUT_KEY_PAGE_DOWN: light_rad[light_num] += 0.5; break;
-//	case GLUT_KEY_F1:
-//		light_num = 0;
-//		break;
-//	case GLUT_KEY_F2:
-//		light_num = 1;
-//		break;
-//	case GLUT_KEY_F3:
-//		light_num = 2;
-//		break;
-//	}
-//	glutPostRedisplay();
-//}
 
 void keyboard(unsigned char key, int x, int y)
 {
@@ -443,11 +359,11 @@ void keyboard(unsigned char key, int x, int y)
 		break;
 	case 'q':
 	case 'Q':
-		model_angle += 5;
+		//model_angle += 5;
 		break;
 	case 'e':
 	case 'E':
-		model_angle -= 5;
+		//model_angle -= 5;
 		break;
 	case 'w':
 	case 'W':
